@@ -1,0 +1,19 @@
+# Secrets: keys reach the container through Secret Manager, never the image.
+.env
+.env.*
+!.env.example
+
+# Local environment and caches
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Editor and tool folders
+.git/
+.claude/
+*.pdf
+*.docx
+.agents/
+.vscode/
+.idea/

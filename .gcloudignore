@@ -1,0 +1,17 @@
+# Files `gcloud run deploy --source .` must not upload to Cloud Build.
+# Without this, gcloud would send the 1 GB+ .venv and the .env holding your keys.
+.gcloudignore
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.git/
+.claude/
+*.pdf
+*.docx
+.agents/
+.vscode/
+.idea/
