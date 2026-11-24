@@ -1,24 +1,25 @@
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Strip whitespace: `docker run --env-file` and pasted secrets keep stray
-    # spaces that the .env loader would otherwise have removed.
+    # Strip whitespace from environment variables and secrets.
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore", str_strip_whitespace=True
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        str_strip_whitespace=True,
     )
 
-    # Optional: LLM-driven itinerary narration
+    # OpenAI configuration
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
-    # Supervisor ReAct loop, vision over frames/pamphlets, and speech-to-text.
     openai_supervisor_model: str = "gpt-4o-mini"
     openai_vision_model: str = "gpt-4o"
     openai_transcription_model: str = "whisper-1"
     supervisor_max_steps: int = 6
 
-    # Optional: Duffel flight offers. A duffel_test_ token is free and returns
-    # test-mode offers; a live token returns real airline inventory.
+    # Duffel flight configuration
     duffel_access_token: str = ""
     duffel_base_url: str = "https://api.duffel.com"
     frankfurter_url: str = "https://api.frankfurter.dev/v1/latest"
@@ -32,9 +33,7 @@ class Settings(BaseSettings):
     open_meteo_url: str = "https://api.open-meteo.com/v1/forecast"
     open_meteo_archive_url: str = "https://archive-api.open-meteo.com/v1/archive"
 
-    # Wikimedia and Nominatim both require an identifying User-Agent with real
-    # contact info. Wikimedia rejects bare tokens and browser strings; Nominatim
-    # additionally blocks placeholder domains such as example.com.
+    # Application identification
     app_name: str = "TravelPlanner"
     app_version: str = "2.0"
     contact_url: str = "https://github.com/travelplanner"
@@ -49,11 +48,12 @@ class Settings(BaseSettings):
     hotel_search_radius_km: int = 12
     must_visit_radius_km: int = 60
 
-    # Multimodal intake limits. Whisper's API rejects files over 25 MB.
+    # Multimodal intake limits
     intake_max_media_mb: int = 25
     intake_video_frames: int = 6
     intake_max_pdf_pages: int = 30
 
+    # API configuration
     api_host: str = "127.0.0.1"
     api_port: int = 8000
 
@@ -69,11 +69,42 @@ class Settings(BaseSettings):
     def flight_mode(self) -> str:
         if not self.duffel_access_token:
             return "off"
-        return "test" if self.duffel_access_token.startswith("duffel_test_") else "live"
+        return (
+            "test"
+            if self.duffel_access_token.startswith("duffel_test_")
+            else "live"
+        )
 
     @property
     def llm_enabled(self) -> bool:
         return bool(self.openai_api_key)
 
 
-settings = Settings()
+def _get_streamlit_settings() -> dict:
+    """Read credentials from Streamlit Community Cloud Secrets."""
+
+    try:
+        import streamlit as st
+
+        values = {}
+
+        for secret_name, setting_name in [
+            ("OPENAI_API_KEY", "openai_api_key"),
+            ("DUFFEL_ACCESS_TOKEN", "duffel_access_token"),
+        ]:
+            try:
+                value = st.secrets[secret_name]
+                if value:
+                    values[setting_name] = str(value).strip()
+            except KeyError:
+                pass
+
+        return values
+
+    except Exception:
+        # Allows the application to run outside Streamlit as well.
+        return {}
+
+
+# Streamlit secrets take precedence over local .env/environment settings.
+settings = Settings(**_get_streamlit_settings())
